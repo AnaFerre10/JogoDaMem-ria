@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Memória - Alfabetização</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #f1c40f;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 120px);
+            grid-gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            width: 120px;
+            height: 150px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+
+        .card-inner {
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            position: relative;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            border-radius: 8px;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .card-front {
+            background-color: #3498db;
+        }
+
+        .card-back {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            transform: rotateY(180deg);
+        }
+
+        .card-back img {
+            max-width: 90px;
+            max-height: 90px;
+            margin-bottom: 10px;
+        }
+
+        #reset-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #27ae60;
+            color: white;
+            margin-top: 10px;
+        }
+
+        footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #bdc3c7;
+        }
+
+        .instructions {
+            background-color: #34495e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            max-width: 500px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Jogo da Memória</h1>
+    
+    <div class="instructions">
+        <p>Oiii Manu :) sua missão é encontrar os pares de palavras com suas imagens correspondentes!</p>
+    </div>
+    
+    <div class="game-board"></div>
+    
+    <button id="reset-button">Jogar de novo</button>
+    
+    <footer>
+        <p>&copy; 2025 Jogo Educativo - Ana Ferre</p>
+    </footer>
+
+    <script>
+        const cardPairs = [
+            { word: "GATO", image: "https://i.pinimg.com/736x/cb/5f/9a/cb5f9a94be83e629116122d3d909113a.jpg" },
+            { word: "CASA", image: "https://img.freepik.com/vetores-premium/uma-ilustracao-de-desenho-animado-de-uma-casa-com-uma-porta-vermelha-e-uma-porta-vermelho_1201528-2092.jpg?semt=ais_hybrid&w=740" },
+            { word: "SOL", image: "https://i.pinimg.com/originals/05/1c/64/051c64ae48f1e90ad3c62446fa3c5fff.jpg" },
+            { word: "LUA", image: "https://img.freepik.com/vetores-gratis/ilustracao-vetorial-a-lua-no-ceu-esta-dormindo-boa-noite_1191-344.jpg" },
+            { word: "CACHORRO", image: "https://www.petlove.com.br/images/breeds/193446/profile/original/pinscher-p.jpg?1532539343" },
+            { word: "MÃO", image: "https://st.depositphotos.com/1007989/2642/i/950/depositphotos_26421119-stock-illustration-kids-hand-showing-five-hand.jpg" },
+            { word: "BOLA", image: "https://img.freepik.com/vetores-gratis/contorno-preenchido-de-bola-de-praia_78370-6149.jpg?semt=ais_hybrid&w=740" },
+            { word: "PRINCESAS", image: "https://nerdpopular.com/wp-content/uploads/2024/12/todas-as-princesas-da-disney-capa.webp" }
+        ];
+
+        // Duplica os pares para formar os pares do jogo
+        const cards = [...cardPairs, ...cardPairs];
+
+        let firstCard = null;
+        let secondCard = null;
+        let lockBoard = false;
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function createBoard() {
+            const gameBoard = document.querySelector('.game-board');
+            gameBoard.innerHTML = ''; // Limpa cartas existentes
+            shuffle(cards);
+            
+            cards.forEach((card, index) => {
+                const cardElement = document.createElement('div');
+                cardElement.classList.add('card');
+                cardElement.dataset.index = index;
+                
+                // Cria o conteúdo da carta
+                cardElement.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front"></div>
+                        <div class="card-back">
+                            ${card.word === card.image ? 
+                                `<img src="${card.image}" alt="${card.word}">` : 
+                                `<img src="${card.image}" alt="${card.word}"><span>${card.word}</span>`}
+                        </div>
+                    </div>
+                `;
+                
+                cardElement.addEventListener('click', flipCard);
+                gameBoard.appendChild(cardElement);
+            });
+        }
+
+        function flipCard() {
+            if (lockBoard) return;
+            if (this === firstCard) return;
+
+            this.classList.add('flipped');
+
+            if (!firstCard) {
+                firstCard = this;
+                return;
+            }
+
+            secondCard = this;
+            checkForMatch();
+        }
+
+        function checkForMatch() {
+            const firstIndex = firstCard.dataset.index;
+            const secondIndex = secondCard.dataset.index;
+            
+            // Verifica se as cartas são do mesmo par (mesmo objeto)
+            const isMatch = cards[firstIndex].word === cards[secondIndex].word && 
+                           cards[firstIndex].image === cards[secondIndex].image &&
+                           firstIndex !== secondIndex;
+
+            isMatch ? disableCards() : unflipCards();
+        }
+
+        function disableCards() {
+            firstCard.removeEventListener('click', flipCard);
+            secondCard.removeEventListener('click', flipCard);
+            
+            // Adiciona classe de acerto
+            firstCard.classList.add('matched');
+            secondCard.classList.add('matched');
+            
+            resetBoard();
+            
+            // Verifica se o jogo acabou
+            checkGameEnd();
+        }
+
+        function checkGameEnd() {
+            const allCards = document.querySelectorAll('.card');
+            const matchedCards = document.querySelectorAll('.card.matched');
+            
+            if (allCards.length === matchedCards.length) {
+                setTimeout(() => {
+                    alert('Parabéns Manu! Você completou o jogo!');
+                }, 500);
+            }
+        }
+
+        function unflipCards() {
+            lockBoard = true;
+            setTimeout(() => {
+                firstCard.classList.remove('flipped');
+                secondCard.classList.remove('flipped');
+                resetBoard();
+            }, 1000);
+        }
+
+        function resetBoard() {
+            [firstCard, secondCard, lockBoard] = [null, null, false];
+        }
+
+        document.getElementById('reset-button').addEventListener('click', createBoard);
+
+        // Inicializa o jogo quando o script carrega
+        createBoard();
+    </script>
+</body>
+</html>
